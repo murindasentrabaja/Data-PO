@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PO Control Tower — PT Murinda Sentra Baja</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --void: #f8fafd;
+    --panel: #ffffff;
+    --panel-raised: #ffffff;
+    --panel-hi: #f1f4f8;
+    --line: #e0e5eb;
+    --line-soft: #f0f3f7;
+    
+    --gemini-blue: #4285f4;
+    --gemini-blue-dim: rgba(66, 133, 244, 0.12);
+    --gemini-blue-dim2: rgba(66, 133, 244, 0.25);
+    --gemini-green: #34a853;
+    --gemini-green-dim: rgba(52, 168, 83, 0.12);
+    --gemini-orange: #fbbc05;
+    --gemini-orange-dim: rgba(251, 188, 5, 0.15);
+    
+    --coral: #ea4335;
+    --coral-dim: rgba(234, 67, 53, 0.12);
+    
+    --cyan: var(--gemini-blue);
+    --cyan-dim: var(--gemini-blue-dim);
+    --cyan-dim2: var(--gemini-blue-dim2);
+    --amber: #f29900;
+    --amber-dim: var(--gemini-orange-dim);
+    
+    --text: #202124;
+    --text-muted: #5f6368;
+    --text-faint: #80868b;
+    
+    --radius: 12px;
+    --radius-sm: 8px;
+    --font-display: 'Chakra Petch', sans-serif;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    --shadow-panel: 0 12px 40px rgba(32, 33, 36, 0.1);
+    --shadow-card: 0 4px 12px rgba(32, 33, 36, 0.05);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background:
+      radial-gradient(1000px circle at 15% 5%, rgba(66, 133, 244, 0.08), transparent 60%),
+      radial-gradient(900px circle at 85% 20%, rgba(52, 168, 83, 0.06), transparent 55%),
+      radial-gradient(1200px circle at 50% 90%, rgba(251, 188, 5, 0.06), transparent 60%),
+      var(--void);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+  
+  ::selection { background: var(--cyan-dim2); color: #000; }
+  a { color: var(--cyan); }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: var(--void); }
+  ::-webkit-scrollbar-thumb { background: #c1c7d0; border-radius: 8px; border: 2px solid var(--void); }
+  ::-webkit-scrollbar-thumb:hover { background: #a0a6b0; }
+
+  :focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; border-radius: 4px; }
+
+  .grid-overlay {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: 0.4;
+    background-image:
+      linear-gradient(rgba(66,133,244,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(66,133,244,0.05) 1px, transparent 1px);
+    background-size: 42px 42px;
+    mask-image: radial-gradient(1200px 700px at 50% 0%, black, transparent 80%);
+    -webkit-mask-image: radial-gradient(1200px 700px at 50% 0%, black, transparent 80%);
+  }
+
+  h1, h2, h3 { font-family: var(--font-display); font-weight: 600; margin: 0; letter-spacing: 0.01em; }
+  .mono { font-family: var(--font-mono); }
+  .muted { color: var(--text-muted); }
+  .eyebrow {
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  button { font-family: var(--font-body); cursor: pointer; }
+
+  .topbar {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    padding: 16px 28px;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--line);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand-text h1 { font-size: 17px; color: var(--text); }
+  .brand-text .eyebrow { margin-top: 1px; color: var(--text-muted); }
+
+  .sync-cluster { display: flex; align-items: center; gap: 14px; }
+  .sync-pill {
+    display: flex; align-items: center; gap: 9px;
+    padding: 7px 13px 7px 10px; border: 1px solid rgba(148, 163, 184, 0.3); border-radius: 999px;
+    background: var(--panel); font-family: var(--font-mono); font-size: 12px; color: var(--text-muted);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-faint); position: relative; flex-shrink: 0; }
+  .dot.ok { background: var(--gemini-green); box-shadow: 0 0 0 0 var(--gemini-green-dim); }
+  .dot.ok::after {
+    content: ''; position: absolute; inset: -4px; border-radius: 50%; border: 1px solid var(--gemini-green);
+    animation: ping 2.2s cubic-bezier(0.4, 0, 0.3, 1) infinite;
+  }
+  .dot.err { background: var(--coral); }
+  .dot.busy { background: var(--amber); animation: blink 1s ease-in-out infinite; }
+  @keyframes ping { 0% { transform: scale(1); opacity: 0.7; } 100% { transform: scale(2.4); opacity: 0; } }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+
+  /* Modern Button Design */
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 9px 15px; border-radius: var(--radius-sm);
+    border: 1px solid rgba(148, 163, 184, 0.5);
+    background: var(--panel); color: var(--text);
+    font-size: 13px; font-weight: 500; transition: all 0.2s ease;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  }
+  .btn:hover { 
+    border-color: var(--gemini-blue); 
+    background: var(--void); 
+    box-shadow: 0 3px 8px rgba(66, 133, 244, 0.12); 
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn-primary { 
+    background: linear-gradient(135deg, var(--gemini-blue), #1a73e8); 
+    color: #fff; border: 1px solid transparent; font-weight: 600; 
+    box-shadow: 0 4px 10px rgba(66, 133, 244, 0.3);
+  }
+  .btn-primary:hover { 
+    border: 1px solid rgba(255,255,255,0.4);
+    filter: brightness(1.08); 
+    box-shadow: 0 6px 14px rgba(66, 133, 244, 0.4); 
+    transform: translateY(-1px); 
+  }
+  .btn-danger { border-color: rgba(234, 67, 53, 0.4); color: var(--coral); }
+  .btn-danger:hover { background: var(--coral-dim); border-color: var(--coral); }
+  .btn-ghost { background: transparent; border-color: rgba(148, 163, 184, 0.3); color: var(--text-muted); box-shadow: none; }
+  .btn-ghost:hover { color: var(--text); background: var(--gemini-blue-dim); border-color: rgba(66, 133, 244, 0.3); }
+  .btn[disabled] { opacity: 0.6; cursor: not-allowed; filter: grayscale(1); }
+  .btn-sm { padding: 6px 10px; font-size: 12px; }
+  .icon { width: 14px; height: 14px; flex-shrink: 0; }
+
+  main { position: relative; z-index: 1; max-width: 1440px; margin: 0 auto; padding: 26px 28px 80px; }
+
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+  .stat-card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 18px 20px; position: relative; overflow: hidden;
+    box-shadow: var(--shadow-card);
+    opacity: 0; transform: translateY(8px); animation: rise 0.5s ease forwards;
+  }
+  .stat-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, var(--accent, var(--gemini-blue)), transparent);
+  }
+  .stat-card:nth-child(1) { animation-delay: 0.02s; }
+  .stat-card:nth-child(2) { animation-delay: 0.08s; --accent: var(--gemini-green); }
+  .stat-card:nth-child(3) { animation-delay: 0.14s; --accent: var(--amber); }
+  .stat-card:nth-child(4) { animation-delay: 0.2s; --accent: #9333ea; }
+  @keyframes rise { to { opacity: 1; transform: none; } }
+  .stat-label { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); }
+  .stat-value { font-family: var(--font-display); font-size: 32px; font-weight: 700; margin-top: 6px; color: var(--text); }
+  .stat-sub { font-size: 12px; color: var(--text-faint); margin-top: 4px; }
+
+  .toolbar {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 14px 16px; margin-bottom: 20px;
+    box-shadow: var(--shadow-card);
+  }
+  .search-box {
+    flex: 1 1 220px; display: flex; align-items: center; gap: 8px;
+    background: var(--void); border: 1px solid rgba(148, 163, 184, 0.4); border-radius: var(--radius-sm);
+    padding: 9px 12px; transition: border-color 0.2s;
+  }
+  .search-box:focus-within { border-color: var(--cyan); background: #fff; box-shadow: 0 0 0 3px var(--cyan-dim); }
+  .search-box input {
+    background: transparent; border: none; outline: none; color: var(--text); font-size: 13px; width: 100%;
+    font-family: var(--font-mono);
+  }
+  .search-box input::placeholder { color: var(--text-faint); font-family: var(--font-body); }
+  select, .select {
+    background: var(--panel); border: 1px solid rgba(148, 163, 184, 0.4); border-radius: var(--radius-sm);
+    color: var(--text); padding: 9px 12px; font-size: 13px; font-family: var(--font-body);
+    transition: all 0.2s; cursor: pointer;
+  }
+  select:focus, .select:focus { border-color: var(--cyan); outline: none; box-shadow: 0 0 0 3px var(--cyan-dim); }
+  .toolbar-spacer { flex: 1 1 auto; }
+
+  .table-wrap {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    overflow-x: auto; box-shadow: var(--shadow-card); width: 100%;
+  }
+  table { width: 100%; min-width: 1400px; border-collapse: collapse; font-size: 13px; }
+  thead th {
+    text-align: left; font-family: var(--font-mono); font-size: 11.5px; letter-spacing: 0.05em; text-transform: uppercase;
+    color: var(--text-muted); font-weight: 600; padding: 14px 16px;
+    border-bottom: 1px solid var(--line); background: var(--panel-hi); white-space: nowrap;
+  }
+  
+  tbody tr { 
+    border-bottom: 1px solid var(--line-soft); 
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); 
+    position: relative;
+    background: var(--panel);
+  }
+  
+  /* Highlight Hari Ini & Besok */
+  tbody tr.row-today { background-color: rgba(52, 168, 83, 0.08); }
+  tbody tr.row-tomorrow { background-color: rgba(251, 188, 5, 0.12); }
+  
+  tbody tr:hover { 
+    transform: translateY(-2px) scale(1.005);
+    box-shadow: 0 8px 24px rgba(66, 133, 244, 0.12);
+    z-index: 10;
+    border-radius: 6px;
+  }
+  tbody tr:hover:not(.row-today):not(.row-tomorrow) { background: #ffffff; }
+  tbody tr.row-today:hover { background-color: rgba(52, 168, 83, 0.15); }
+  tbody tr.row-tomorrow:hover { background-color: rgba(251, 188, 5, 0.2); }
+  
+  tbody td { padding: 8px 16px; vertical-align: middle; color: var(--text); transition: color 0.3s; white-space: nowrap; height: 56px; }
+  td.no { font-family: var(--font-mono); color: var(--text-faint); width: 36px; }
+  td.mono { font-family: var(--font-mono); font-size: 12.5px; }
+  td.wrap-text { white-space: normal; min-width: 180px; }
+  .muted-cell { color: var(--text-muted); }
+
+  /* Inline Editing Input Styling */
+  .inline-input {
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    padding: 6px 8px;
+    font-family: inherit;
+    font-size: inherit;
+    color: inherit;
+    width: 100%;
+    min-width: 110px;
+    transition: all 0.2s ease;
+    box-shadow: none;
+  }
+  .inline-input:hover {
+    border-color: rgba(66, 133, 244, 0.4);
+    background: rgba(66, 133, 244, 0.04);
+  }
+  .inline-input:focus {
+    border-color: var(--cyan);
+    background: #fff;
+    outline: none;
+    box-shadow: 0 0 0 3px var(--cyan-dim);
+  }
+  .inline-input:disabled {
+    opacity: 0.6;
+    cursor: wait;
+  }
+
+  .tag {
+    display: inline-flex; align-items: stretch; gap: 0; border-radius: 6px; overflow: hidden;
+    border: 1px solid var(--line); background: var(--void);
+  }
+  .tag-stripe {
+    width: 9px; flex-shrink: 0;
+    background: repeating-linear-gradient(90deg, var(--gemini-blue) 0 1px, transparent 1px 2px, #d1d5db 2px 3px, transparent 3px 4px);
+    opacity: 0.7;
+  }
+  .tag-code {
+    font-family: var(--font-mono); font-size: 12px; padding: 5px 9px; color: var(--gemini-blue); font-weight: 600; letter-spacing: 0.02em;
+  }
+
+  .row-actions { display: flex; gap: 6px; justify-content: flex-end; opacity: 0.4; transition: opacity 0.3s; }
+  tbody tr:hover .row-actions { opacity: 1; }
+  .icon-btn {
+    width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 6px; border: 1px solid transparent; background: transparent; color: var(--text-muted);
+    transition: all 0.2s; cursor: pointer;
+  }
+  .icon-btn:hover { color: var(--gemini-blue); border-color: var(--gemini-blue-dim2); background: var(--gemini-blue-dim); }
+  .icon-btn.danger:hover { color: var(--coral); border-color: var(--coral-dim); background: var(--coral-dim); }
+
+  .empty-state { padding: 60px 20px; text-align: center; color: var(--text-muted); }
+  .empty-state h3 { color: var(--text); margin-bottom: 6px; font-size: 16px; font-weight: 600; }
+  .empty-state p { font-size: 13px; max-width: 420px; margin: 0 auto; }
+
+  .table-foot {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px; border-top: 1px solid var(--line); font-size: 12px; color: var(--text-muted);
+    font-family: var(--font-mono); background: var(--panel-hi);
+  }
+
+  #backdrop {
+    position: fixed; inset: 0; background: rgba(32, 33, 36, 0.4); backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    z-index: 40; opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
+  }
+  #backdrop.show { opacity: 1; pointer-events: auto; }
+
+  .panel {
+    position: fixed; top: 0; right: 0; height: 100%; width: min(460px, 94vw);
+    background: var(--panel); border-left: 1px solid var(--line);
+    box-shadow: var(--shadow-panel); z-index: 50;
+    transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex; flex-direction: column;
+  }
+  .panel.show { transform: translateX(0); }
+  .panel-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 24px; border-bottom: 1px solid var(--line); flex-shrink: 0;
+    background: var(--panel);
+  }
+  .panel-head h2 { font-size: 18px; color: var(--text); }
+  .panel-body { padding: 24px; overflow-y: auto; flex: 1; background: var(--panel-hi); }
+  .panel-foot {
+    padding: 16px 24px; border-top: 1px solid var(--line); display: flex; gap: 10px; justify-content: flex-end;
+    flex-shrink: 0; background: var(--panel);
+  }
+
+  .field { margin-bottom: 18px; }
+  .field label {
+    display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); margin-bottom: 8px;
+    font-family: var(--font-mono); font-weight: 500;
+  }
+  .field .req { color: var(--coral); }
+  .field input[type=text], .field input[type=number], .field input[type=date],
+  .field select, .field textarea {
+    width: 100%; background: #ffffff; border: 1px solid rgba(148, 163, 184, 0.5); border-radius: var(--radius-sm);
+    color: var(--text); padding: 10px 12px; font-size: 13.5px; font-family: var(--font-body);
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus { 
+    border-color: var(--cyan); outline: none; box-shadow: 0 0 0 3px var(--cyan-dim); 
+  }
+  .field textarea { resize: vertical; min-height: 70px; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .field-hint { font-size: 11px; color: var(--text-faint); margin-top: 6px; line-height: 1.4; }
+  .autofill-note { color: var(--gemini-green); font-weight: 500; }
+
+  .derived-preview {
+    background: #ffffff; border: 1px dashed var(--line); border-radius: var(--radius-sm);
+    padding: 16px; margin-top: 4px; margin-bottom: 18px;
+  }
+  .derived-preview .eyebrow { margin-bottom: 10px; color: var(--gemini-blue); font-weight: 600; }
+  .derived-row { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; padding: 4px 0; border-bottom: 1px solid var(--line-soft); }
+  .derived-row:last-child { border-bottom: none; }
+  .derived-row .k { color: var(--text-muted); }
+  .derived-row .v { font-family: var(--font-mono); color: var(--text); text-align: right; word-break: break-all; font-weight: 500; }
+
+  #toastContainer { position: fixed; bottom: 24px; right: 24px; z-index: 80; display: flex; flex-direction: column; gap: 10px; }
+  .toast {
+    background: #ffffff; border: 1px solid var(--line); border-left: 4px solid var(--gemini-blue);
+    border-radius: var(--radius-sm); padding: 14px 18px; font-size: 13.5px; font-weight: 500; max-width: 320px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    animation: toast-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  .toast.err { border-left-color: var(--coral); }
+  .toast.ok { border-left-color: var(--gemini-green); }
+  @keyframes toast-in { from { opacity: 0; transform: translateY(15px) scale(0.9); } to { opacity: 1; transform: none; } }
+
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(32, 33, 36, 0.5); z-index: 60;
+    display: none; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(2px);
+  }
+  .modal-backdrop.show { display: flex; }
+  .modal {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    width: min(400px, 100%); padding: 26px; box-shadow: var(--shadow-panel);
+  }
+  .modal h3 { font-size: 17px; margin-bottom: 10px; }
+  .modal p { font-size: 13.5px; color: var(--text-muted); margin: 0 0 22px; line-height: 1.5; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+
+  .config-gate {
+    max-width: 560px; margin: 14vh auto; background: var(--panel); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 36px; text-align: center; box-shadow: var(--shadow-panel);
+  }
+  .config-gate h2 { font-size: 20px; margin-bottom: 12px; color: var(--text); }
+  .config-gate p { color: var(--text-muted); font-size: 14px; line-height: 1.7; margin-bottom: 8px; }
+  .config-gate code {
+    background: var(--void); border: 1px solid var(--line); border-radius: 5px; padding: 3px 8px;
+    font-family: var(--font-mono); font-size: 13px; color: var(--gemini-blue); font-weight: 500;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="grid-overlay"></div>
+
+<header class="topbar">
+  <div class="brand">
+    <img src="MSB Logo.png" alt="MSB Logo" style="height: 38px; object-fit: contain;">
+    <div class="brand-text">
+      <h1>PO Control Tower</h1>
+      <div class="eyebrow">PT Murinda Sentra Baja &middot; Purchase Order</div>
+    </div>
+  </div>
+  <div class="sync-cluster">
+    <div class="sync-pill">
+      <span class="dot" id="syncDot"></span>
+      <span id="syncLabel">Menghubungkan…</span>
+    </div>
+    <button class="btn btn-ghost btn-sm" id="btnRefresh" title="Muat ulang data">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+      Muat ulang
+    </button>
+  </div>
+</header>
+
+<main id="mainApp" style="display:none;">
+
+  <section class="stats">
+    <div class="stat-card">
+      <div class="stat-label">Total Baris PO</div>
+      <div class="stat-value" id="statTotal">0</div>
+      <div class="stat-sub" id="statTotalSub">memuat…</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Hari Ini</div>
+      <div class="stat-value" id="statToday">0</div>
+      <div class="stat-sub">Jadwal pengiriman hari ini</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Besok</div>
+      <div class="stat-value" id="statTomorrow">0</div>
+      <div class="stat-sub">Jadwal pengiriman besok</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Klien Aktif</div>
+      <div class="stat-value" id="statClients">0</div>
+      <div class="stat-sub">Total Client Aktif</div>
+    </div>
+  </section>
+
+  <section class="toolbar">
+    <div class="search-box">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color:var(--text-muted)"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" id="searchInput" placeholder="Cari PO Number, Unit, Serial Number, Client…">
+    </div>
+    
+    <select id="filterUnit"><option value="">Semua Unit</option></select>
+    
+    <select id="filterStok">
+      <option value="">Semua Status PO</option>
+      <option value="stok">Hanya Stok (PO Kosong)</option>
+      <option value="po">Sudah PO</option>
+    </select>
+    
+    <select id="filterClient"><option value="">Semua client</option></select>
+    <select id="filterBulan"><option value="">Semua bulan</option></select>
+    
+    <input type="date" id="filterDate" class="select" title="Filter Jadwal Pengiriman">
+    
+    <button class="btn btn-ghost" id="btnResetFilter" title="Reset semua filter">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+      Reset Filter
+    </button>
+    
+    <div class="toolbar-spacer"></div>
+    <span class="muted" id="filterCount" style="font-size:12px; font-weight:500;"></span>
+  </section>
+
+  <section class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>No</th>
+          <th>PO Number</th>
+          <th>Periode</th>
+          <th>Unit / Part</th>
+          <th>Qty</th>
+          <th>Client</th>
+          <th>Delivery Date</th>
+          <th>Serial Number</th>
+          <th>Status Delivery</th>
+          <th>Noted</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+    <div class="empty-state" id="emptyState" style="display:none;">
+      <h3>Belum ada data yang cocok</h3>
+      <p>Coba ubah kata kunci pencarian atau filter yang digunakan.</p>
+    </div>
+    <div class="table-foot">
+      <span id="footInfo">—</span>
+      <span id="footSync">—</span>
+    </div>
+  </section>
+</main>
+
+<div class="config-gate" id="configGate" style="display:none;">
+  <h2>Belum terhubung ke spreadsheet</h2>
+  <p>Isi dulu <code>CONFIG.API_URL</code> (dan <code>CONFIG.API_TOKEN</code> jika Anda mengaktifkan token) di bagian atas file <code>index.html</code> ini dengan URL Web App hasil deploy <code>Code.gs</code> Anda.</p>
+  <p style="margin-top:10px;">Setelah diisi, simpan file dan buka ulang halaman ini.</p>
+</div>
+
+<div id="backdrop"></div>
+<aside class="panel" id="panel">
+  <div class="panel-head">
+    <h2 id="panelTitle">Edit Baris PO</h2>
+    <button class="icon-btn" id="btnClosePanel">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div class="panel-body" id="panelBody">
+    <div class="field">
+      <label>PO Number</label>
+      <input type="text" id="f_poNumber" placeholder="mis. LC7002147-1">
+      <div class="field-hint">Kosongkan jika unit belum resmi masuk PO (stok menunggu PO).</div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>PO Update</label>
+        <input type="date" id="f_poUpdate">
+      </div>
+      <div class="field">
+        <label>Delivery Date <span class="req">*</span></label>
+        <input type="date" id="f_deliveryDate">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Unit Number <span class="req">*</span></label>
+      <input type="text" id="f_unitNumber" list="dl_units" placeholder="mis. PC950LC-11R">
+      <datalist id="dl_units"></datalist>
+      <div class="field-hint" id="autofillHint">Pilih unit yang sudah pernah tercatat untuk isi otomatis.</div>
+    </div>
+
+    <div class="field" id="wrap_partNumber">
+      <label>Part Number</label>
+      <input type="text" id="f_partNumber" placeholder="mis. 2AA-46-22111">
+      <div class="field-hint">Dapat disembunyikan saat tambah PO baru.</div>
+    </div>
+
+    <div class="field">
+      <label>Code Serial <span class="req">*</span></label>
+      <input type="text" id="f_codeSerial" placeholder="mis. PC950 / STD / LG">
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Qty <span class="req">*</span></label>
+        <input type="number" id="f_qty" min="1" value="1">
+      </div>
+      <div class="field">
+        <label>Number (urut unit) <span class="req">*</span></label>
+        <input type="text" id="f_number" placeholder="mis. 001">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Client <span class="req">*</span></label>
+      <select id="f_clientSelect">
+        <option value="">Pilih client…</option>
+        <option value="__new__">+ Client baru…</option>
+      </select>
+      <input type="text" id="f_clientNew" placeholder="Nama client baru" style="margin-top:8px;display:none;">
+    </div>
+
+    <div class="field" id="wrap_statusDelivery">
+      <label>Status Delivery</label>
+      <input type="text" id="f_statusDelivery" placeholder="Status manual atau histori">
+    </div>
+
+    <div class="field">
+      <label>Noted</label>
+      <textarea id="f_noted" placeholder="Catatan tambahan (opsional)"></textarea>
+    </div>
+
+    <div class="derived-preview">
+      <div class="eyebrow">Otomatis mengikuti rumus sheet</div>
+      <div class="derived-row"><span class="k">No (posisi baris)</span><span class="v" id="d_no">—</span></div>
+      <div class="derived-row"><span class="k">Periode Bulan</span><span class="v" id="d_periode">—</span></div>
+      <div class="derived-row"><span class="k">Bulan</span><span class="v" id="d_bulan">—</span></div>
+      <div class="derived-row"><span class="k">Serial Number</span><span class="v" id="d_serial">—</span></div>
+      <div class="derived-row"><span class="k">Search</span><span class="v" id="d_search">—</span></div>
+    </div>
+  </div>
+  <div class="panel-foot">
+    <button class="btn btn-ghost" id="btnCancelForm">Batal</button>
+    <button class="btn btn-primary" id="btnSaveForm">Simpan ke Sheet</button>
+  </div>
+</aside>
+
+<div class="modal-backdrop" id="confirmModal">
+  <div class="modal">
+    <h3>Hapus baris ini?</h3>
+    <p id="confirmText">Baris akan dihapus permanen dari sheet dan tidak bisa dikembalikan lewat aplikasi ini.</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="btnCancelDelete">Batal</button>
+      <button class="btn btn-danger" id="btnConfirmDelete">Hapus</button>
+    </div>
+  </div>
+</div>
+
+<div id="toastContainer"></div>
+
+<script>
+/* =========================================================
+   CONFIG — isi dua baris ini setelah Code.gs Anda ter-deploy
+   ========================================================= */
+const CONFIG = {
+  API_URL: 'https://script.google.com/macros/s/AKfycbza8ctw1ct5Ls3oR8idUiqwKtHpuEsIO92cYx0km2u6GT-kvM59u1sQkB6hP30T9Yqe_Q/exec',
+  API_TOKEN: '' 
+};
+
+const BULAN_ID = ['', 'Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+const BULAN_ID_SHORT = ['', 'Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agt','Sep','Okt','Nov','Des'];
+
+function serialSuffix(code){
+  const c = String(code||'').trim().toUpperCase();
+  if(c === 'STD') return '-A-';
+  if(c === 'LG') return '-B-';
+  return '-';
+}
+
+/* Parse tanggal ke format lokal yg anti error bergeser hari */
+function parseDateSafe(val) {
+  if (!val) return null;
+  let d;
+  if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(val.trim())) {
+    const parts = val.trim().split('-');
+    d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+  } else {
+    d = new Date(val);
+  }
+  if (isNaN(d.getTime())) return null;
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function isSameDay(d1, d2) {
+  if (!d1 || !d2) return false;
+  return d1.getFullYear() === d2.getFullYear() &&
+         d1.getMonth() === d2.getMonth() &&
+         d1.getDate() === d2.getDate();
+}
+
+function formatIndoDateDisp(s){
+  const d = parseDateSafe(s);
+  if(!d) return escapeHtml(s || '—');
+  return String(d.getDate()).padStart(2,'0') + ' ' + BULAN_ID_SHORT[d.getMonth()+1] + ' ' + d.getFullYear();
+}
+
+function toYMD(rawStr) {
+  const d = parseDateSafe(rawStr);
+  if (!d) return '';
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function computeDerived(f){
+  const hasPO = !!(f.poNumber && f.poNumber.trim());
+  const d = parseDateSafe(f.deliveryDate);
+  let periodeBulan = '', bulan = '';
+  if(hasPO && d){ periodeBulan = d.getMonth()+1; bulan = BULAN_ID[periodeBulan]; }
+  const serialNumber = f.codeSerial ? (f.codeSerial + serialSuffix(f.codeSerial) + (f.number||'')) : '';
+  const search = (hasPO && serialNumber) ? ('Serial Number:'+serialNumber+'/'+(f.unitNumber||'')+'/'+(f.client||'')) : '';
+  return {periodeBulan, bulan, serialNumber, search};
+}
+
+let state = {
+  rows: [],
+  meta: { clients: [], units: {}, bulanList: BULAN_ID.slice(1) },
+  filters: { search:'', client:'', bulan:'', filterDate:'', unit:'', stokStatus:'' },
+  editingRowIndex: null,
+  lastSync: null,
+  autoPollHandle: null
+};
+
+async function apiGet(action){
+  const url = CONFIG.API_URL + (CONFIG.API_URL.includes('?') ? '&' : '?') + 'action=' + action;
+  const res = await fetch(url, {method:'GET'});
+  if(!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json();
+}
+
+async function apiMutate(action, payload){
+  const body = Object.assign({action, token: CONFIG.API_TOKEN}, payload);
+  const res = await fetch(CONFIG.API_URL, {
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify(body)
+  });
+  if(!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json();
+}
+
+window.addEventListener('DOMContentLoaded', boot);
+
+async function boot(){
+  if(!CONFIG.API_URL){
+    document.getElementById('configGate').style.display = 'block';
+    setSync('err', 'Belum dikonfigurasi');
+    return;
+  }
+  document.getElementById('mainApp').style.display = 'block';
+  bindEvents();
+  await refreshAll(true);
+  state.autoPollHandle = setInterval(() => refreshAll(false), 45000);
+}
+
+function setSync(kind, label){
+  const dot = document.getElementById('syncDot');
+  dot.className = 'dot ' + kind;
+  document.getElementById('syncLabel').textContent = label;
+}
+
+async function refreshAll(showToastOnFail){
+  setSync('busy', 'Sinkronisasi…');
+  try{
+    const [listRes, metaRes] = await Promise.all([apiGet('list'), apiGet('meta')]);
+    if(!listRes.ok) throw new Error(listRes.error || 'Gagal memuat data');
+    if(!metaRes.ok) throw new Error(metaRes.error || 'Gagal memuat metadata');
+    state.rows = listRes.rows;
+    state.meta = metaRes;
+    state.lastSync = new Date();
+    setSync('ok', 'Tersambung');
+    populateFilterOptions();
+    renderStats();
+    renderTable();
+    document.getElementById('footSync').textContent = 'Sinkron terakhir: ' + state.lastSync.toLocaleTimeString('id-ID');
+  }catch(err){
+    setSync('err', 'Gagal sinkron');
+    if(showToastOnFail) toast('err', 'Tidak bisa memuat data: ' + err.message);
+  }
+}
+
+function renderStats(){
+  const rows = state.rows;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+  
+  let todayCount = 0, tomorrowCount = 0;
+  const clients = new Set();
+  
+  rows.forEach(r=>{
+    if(r.client) clients.add(r.client);
+    const d = parseDateSafe(r.deliveryDate);
+    if(d){ 
+      if(isSameDay(d, today)) todayCount++; 
+      else if(isSameDay(d, tomorrow)) tomorrowCount++;
+    }
+  });
+  
+  document.getElementById('statTotal').textContent = rows.length;
+  document.getElementById('statTotalSub').textContent = rows.length + ' Total Data PO dan Stock';
+  document.getElementById('statToday').textContent = todayCount;
+  document.getElementById('statTomorrow').textContent = tomorrowCount;
+  document.getElementById('statClients').textContent = clients.size;
+}
+
+function populateFilterOptions(){
+  const unitSel = document.getElementById('filterUnit');
+  const curUnit = unitSel.value;
+  unitSel.innerHTML = '<option value="">Semua Unit</option>' +
+    Object.keys(state.meta.units).map(u=>`<option value="${escapeAttr(u)}">${escapeHtml(u)}</option>`).join('');
+  unitSel.value = curUnit;
+
+  const clientSel = document.getElementById('filterClient');
+  const curClient = clientSel.value;
+  clientSel.innerHTML = '<option value="">Semua client</option>' +
+    state.meta.clients.map(c=>`<option value="${escapeAttr(c)}">${escapeHtml(c)}</option>`).join('');
+  clientSel.value = curClient;
+
+  const bulanSel = document.getElementById('filterBulan');
+  const curBulan = bulanSel.value;
+  bulanSel.innerHTML = '<option value="">Semua bulan</option>' +
+    state.meta.bulanList.map(b=>`<option value="${b}">${b}</option>`).join('');
+  bulanSel.value = curBulan;
+
+  const dl = document.getElementById('dl_units');
+  dl.innerHTML = Object.keys(state.meta.units).map(u=>`<option value="${escapeAttr(u)}">`).join('');
+
+  const clientFormSel = document.getElementById('f_clientSelect');
+  const curFormVal = clientFormSel.value;
+  clientFormSel.innerHTML = '<option value="">Pilih client…</option>' +
+    state.meta.clients.map(c=>`<option value="${escapeAttr(c)}">${escapeHtml(c)}</option>`).join('') +
+    '<option value="__new__">+ Client baru…</option>';
+  if(curFormVal) clientFormSel.value = curFormVal;
+}
+
+function getFilteredRows(){
+  const {search, client, bulan, filterDate, unit, stokStatus} = state.filters;
+  const q = search.trim().toLowerCase();
+  
+  return state.rows.filter(r=>{
+    if(client && r.client !== client) return false;
+    if(bulan && r.bulan !== bulan) return false;
+    if(unit && r.unitNumber !== unit) return false;
+    
+    const hasPoNumber = r.poNumber && String(r.poNumber).trim() !== '';
+    if(stokStatus === 'stok' && hasPoNumber) return false;
+    if(stokStatus === 'po' && !hasPoNumber) return false;
+
+    if(filterDate){
+      const d = parseDateSafe(r.deliveryDate);
+      const fd = parseDateSafe(filterDate);
+      if(!isSameDay(d, fd)) return false;
+    }
+    if(q){
+      const hay = [r.poNumber, r.unitNumber, r.partNumber, r.codeSerial, r.serialNumber, r.client, r.search, r.noted]
+        .filter(Boolean).join(' ').toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+function renderTable(){
+  const rows = getFilteredRows();
+  const tbody = document.getElementById('tableBody');
+  const empty = document.getElementById('emptyState');
+  document.getElementById('filterCount').textContent = rows.length + ' / ' + state.rows.length + ' baris ditampilkan';
+  document.getElementById('footInfo').textContent = rows.length + ' baris';
+
+  if(rows.length === 0){
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+  
+  tbody.innerHTML = rows.map(r=>{
+    const d = parseDateSafe(r.deliveryDate);
+    let rowClass = '';
+    
+    if(d){
+      if(isSameDay(d, today)){
+        rowClass = 'row-today';
+      } else if(isSameDay(d, tomorrow)){
+        rowClass = 'row-tomorrow';
+      }
+    }
+    
+    return `
+    <tr data-row="${r.rowIndex}" class="${rowClass}">
+      <td class="no">${r.no ?? ''}</td>
+      <td class="mono" style="font-weight:500;">
+        <input type="text" class="inline-input" data-field="poNumber" data-row="${r.rowIndex}" value="${escapeAttr(r.poNumber || '')}" placeholder="PO Number">
+      </td>
+      <td class="muted-cell">${escapeHtml(r.bulan || '—')}</td>
+      <td>
+        <div style="font-weight:500; margin-bottom: 2px;">
+           <input type="text" class="inline-input" style="font-weight:600;" data-field="unitNumber" data-row="${r.rowIndex}" value="${escapeAttr(r.unitNumber || '')}" placeholder="Unit Number">
+        </div>
+        <div class="muted-cell mono" style="font-size:11.5px;">
+           <input type="text" class="inline-input" style="font-size:11.5px; padding:3px 6px;" data-field="partNumber" data-row="${r.rowIndex}" value="${escapeAttr(r.partNumber || '')}" placeholder="Part Number">
+        </div>
+      </td>
+      <td><strong>${r.qty ?? ''}</strong></td>
+      <td>${escapeHtml(r.client || '—')}</td>
+      <td style="font-weight:500;">
+        <input type="date" class="inline-input" data-field="deliveryDate" data-row="${r.rowIndex}" value="${toYMD(r.deliveryDate)}">
+      </td>
+      <td>
+        <span class="tag"><span class="tag-stripe"></span><span class="tag-code">${escapeHtml(r.serialNumber || '—')}</span></span>
+      </td>
+      <td class="muted-cell">${formatIndoDateDisp(r.statusDelivery)}</td>
+      <td class="muted-cell wrap-text">${escapeHtml(r.noted || '')}</td>
+      <td>
+        <div class="row-actions">
+          <button class="icon-btn" title="Edit Baris" data-action="edit" data-row="${r.rowIndex}">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          </button>
+          <button class="icon-btn danger" title="Hapus" data-action="delete" data-row="${r.rowIndex}">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>
+          </button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+const formIds = ['f_poNumber','f_poUpdate','f_deliveryDate','f_unitNumber','f_partNumber','f_codeSerial',
+  'f_qty','f_number','f_statusDelivery','f_noted'];
+
+function openPanel(rowData){
+  if (!rowData) return; // Panel kini hanya untuk mode edit
+  state.editingRowIndex = rowData.rowIndex;
+  document.getElementById('panelTitle').textContent = 'Edit Baris #' + rowData.no;
+
+  document.getElementById('wrap_partNumber').style.display = 'block';
+  document.getElementById('wrap_statusDelivery').style.display = 'block';
+
+  document.getElementById('f_poNumber').value = rowData?.poNumber || '';
+  document.getElementById('f_poUpdate').value = toYMD(rowData?.poUpdate);
+  document.getElementById('f_deliveryDate').value = toYMD(rowData?.deliveryDate);
+  document.getElementById('f_unitNumber').value = rowData?.unitNumber || '';
+  document.getElementById('f_partNumber').value = rowData?.partNumber || '';
+  document.getElementById('f_codeSerial').value = rowData?.codeSerial || '';
+  document.getElementById('f_qty').value = rowData?.qty || 1;
+  document.getElementById('f_number').value = rowData?.number || '';
+  document.getElementById('f_statusDelivery').value = rowData?.statusDelivery || '';
+  document.getElementById('f_noted').value = rowData?.noted || '';
+
+  const clientSel = document.getElementById('f_clientSelect');
+  const clientNew = document.getElementById('f_clientNew');
+  clientNew.style.display = 'none'; clientNew.value = '';
+  if(rowData?.client && state.meta.clients.includes(rowData.client)){
+    clientSel.value = rowData.client;
+  } else if(rowData?.client){
+    clientSel.value = '__new__'; clientNew.style.display='block'; clientNew.value = rowData.client;
+  } else {
+    clientSel.value = '';
+  }
+
+  updateDerivedPreview();
+  document.getElementById('backdrop').classList.add('show');
+  document.getElementById('panel').classList.add('show');
+  document.getElementById('f_poNumber').focus();
+}
+
+function closePanel(){
+  document.getElementById('backdrop').classList.remove('show');
+  document.getElementById('panel').classList.remove('show');
+}
+
+function getFormClient(){
+  const sel = document.getElementById('f_clientSelect').value;
+  if(sel === '__new__') return document.getElementById('f_clientNew').value.trim();
+  return sel;
+}
+
+function readForm(){
+  return {
+    poNumber: document.getElementById('f_poNumber').value.trim(),
+    poUpdate: document.getElementById('f_poUpdate').value,
+    deliveryDate: document.getElementById('f_deliveryDate').value,
+    unitNumber: document.getElementById('f_unitNumber').value.trim(),
+    partNumber: document.getElementById('f_partNumber').value.trim(),
+    codeSerial: document.getElementById('f_codeSerial').value.trim(),
+    qty: document.getElementById('f_qty').value,
+    number: document.getElementById('f_number').value.trim(),
+    client: getFormClient(),
+    statusDelivery: document.getElementById('f_statusDelivery').value.trim(),
+    noted: document.getElementById('f_noted').value.trim()
+  };
+}
+
+function updateDerivedPreview(){
+  const f = readForm();
+  const derived = computeDerived(f);
+  document.getElementById('d_no').textContent = state.editingRowIndex
+    ? (state.rows.find(r=>r.rowIndex===state.editingRowIndex)?.no ?? '—')
+    : (state.rows.length + 1);
+  document.getElementById('d_periode').textContent = derived.periodeBulan || '(kosong — isi PO Number dulu)';
+  document.getElementById('d_bulan').textContent = derived.bulan || '(kosong)';
+  document.getElementById('d_serial').textContent = derived.serialNumber || '(kosong)';
+  document.getElementById('d_search').textContent = derived.search || '(kosong)';
+}
+
+function tryAutofillFromUnit(){
+  const unit = document.getElementById('f_unitNumber').value.trim();
+  const hint = document.getElementById('autofillHint');
+  if(state.meta.units[unit]){
+    const info = state.meta.units[unit];
+    document.getElementById('f_partNumber').value = info.partNumber || '';
+    document.getElementById('f_codeSerial').value = info.codeSerial || '';
+    hint.innerHTML = '<span class="autofill-note">✓ Code Serial (dan Part Number) terisi otomatis dari unit yang sama.</span>';
+  } else if(unit){
+    hint.textContent = 'Unit baru — isi Code Serial secara manual.';
+  } else {
+    hint.textContent = 'Pilih unit yang sudah pernah tercatat untuk isi otomatis.';
+  }
+}
+
+async function saveForm(){
+  const f = readForm();
+  if(!f.unitNumber || !f.codeSerial || !f.client || !f.number || !f.deliveryDate || !f.qty || Number(f.qty) < 1){
+    toast('err', 'Lengkapi dulu field bertanda * dengan benar.');
+    return;
+  }
+  const btn = document.getElementById('btnSaveForm');
+  btn.disabled = true; btn.textContent = 'Menyimpan…';
+  try{
+    const action = state.editingRowIndex ? 'update' : 'create';
+    const payload = action === 'update' ? {rowIndex: state.editingRowIndex, data: f} : {data: f};
+    const res = await apiMutate(action, payload);
+    if(!res.ok) throw new Error(res.error || 'Gagal menyimpan');
+    state.rows = res.rows;
+    renderStats(); renderTable(); populateFilterOptions();
+    toast('ok', action === 'update' ? 'Perubahan tersimpan ke sheet.' : 'Baris baru ditambahkan ke sheet.');
+    closePanel();
+  }catch(err){
+    toast('err', 'Gagal menyimpan: ' + err.message);
+  }finally{
+    btn.disabled = false; btn.textContent = 'Simpan ke Sheet';
+  }
+}
+
+let pendingDeleteRow = null;
+function askDelete(rowIndex, label){
+  pendingDeleteRow = rowIndex;
+  document.getElementById('confirmText').innerHTML = `Baris <strong>${escapeHtml(label)}</strong> akan dihapus permanen dari sheet dan tidak bisa dikembalikan lewat aplikasi ini.`;
+  document.getElementById('confirmModal').classList.add('show');
+}
+async function doDelete(){
+  if(!pendingDeleteRow) return;
+  document.getElementById('confirmModal').classList.remove('show');
+  try{
+    const res = await apiMutate('delete', {rowIndex: pendingDeleteRow});
+    if(!res.ok) throw new Error(res.error || 'Gagal menghapus');
+    state.rows = res.rows;
+    renderStats(); renderTable(); populateFilterOptions();
+    toast('ok', 'Baris dihapus dari sheet.');
+  }catch(err){
+    toast('err', 'Gagal menghapus: ' + err.message);
+  }finally{
+    pendingDeleteRow = null;
+  }
+}
+
+function toast(kind, msg){
+  const el = document.createElement('div');
+  el.className = 'toast ' + kind;
+  el.textContent = msg;
+  document.getElementById('toastContainer').appendChild(el);
+  setTimeout(()=>{ el.style.opacity='0'; el.style.transform='translateY(15px) scale(0.9)'; el.style.transition='all .3s'; setTimeout(()=>el.remove(), 300); }, 4200);
+}
+
+function escapeHtml(s){
+  return String(s ?? '').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function escapeAttr(s){ return escapeHtml(s); }
+
+function bindEvents(){
+  document.getElementById('btnRefresh').addEventListener('click', ()=>refreshAll(true));
+  
+  document.getElementById('btnClosePanel').addEventListener('click', closePanel);
+  document.getElementById('btnCancelForm').addEventListener('click', closePanel);
+  document.getElementById('backdrop').addEventListener('click', closePanel);
+  document.getElementById('btnSaveForm').addEventListener('click', saveForm);
+
+  // Filter Reset
+  document.getElementById('btnResetFilter').addEventListener('click', () => {
+    state.filters = { search:'', client:'', bulan:'', filterDate:'', unit:'', stokStatus:'' };
+    document.getElementById('searchInput').value = '';
+    document.getElementById('filterClient').value = '';
+    document.getElementById('filterBulan').value = '';
+    document.getElementById('filterDate').value = '';
+    document.getElementById('filterUnit').value = '';
+    document.getElementById('filterStok').value = '';
+    renderTable();
+  });
+
+  // Inline Editing Listeners
+  document.getElementById('tableBody').addEventListener('change', async (e) => {
+    if (e.target.classList.contains('inline-input')) {
+      const rowIndex = Number(e.target.dataset.row);
+      const field = e.target.dataset.field;
+      const rowData = state.rows.find(r => r.rowIndex === rowIndex);
+      if (!rowData) return;
+
+      const newVal = e.target.value.trim();
+      let oldVal = rowData[field] || '';
+      
+      // Khusus format tanggal
+      if (field === 'deliveryDate') {
+        oldVal = toYMD(rowData[field]);
+      }
+      
+      if (oldVal !== newVal) {
+        rowData[field] = newVal;
+        e.target.disabled = true;
+        
+        try {
+          const res = await apiMutate('update', {rowIndex: rowIndex, data: rowData});
+          if (res.ok) {
+             state.rows = res.rows;
+             toast('ok', 'Data baris berhasil diperbarui.');
+          } else {
+             throw new Error(res.error || 'Gagal menyimpan');
+          }
+        } catch (err) {
+          toast('err', 'Gagal menyimpan inline: ' + err.message);
+        } finally {
+          renderStats();
+          renderTable();
+        }
+      }
+    }
+  });
+
+  document.getElementById('tableBody').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.target.classList.contains('inline-input')) {
+      e.target.blur();
+    }
+  });
+
+  document.getElementById('f_unitNumber').addEventListener('input', ()=>{ tryAutofillFromUnit(); updateDerivedPreview(); });
+  
+  formIds.filter(id=>id!=='f_unitNumber').forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.addEventListener('input', updateDerivedPreview);
+  });
+  
+  document.getElementById('f_clientSelect').addEventListener('change', (e)=>{
+    document.getElementById('f_clientNew').style.display = e.target.value === '__new__' ? 'block' : 'none';
+    updateDerivedPreview();
+  });
+  document.getElementById('f_clientNew').addEventListener('input', updateDerivedPreview);
+
+  document.getElementById('searchInput').addEventListener('input', (e)=>{
+    state.filters.search = e.target.value; renderTable();
+  });
+  document.getElementById('filterUnit').addEventListener('change', (e)=>{
+    state.filters.unit = e.target.value; renderTable();
+  });
+  document.getElementById('filterStok').addEventListener('change', (e)=>{
+    state.filters.stokStatus = e.target.value; renderTable();
+  });
+  document.getElementById('filterClient').addEventListener('change', (e)=>{
+    state.filters.client = e.target.value; renderTable();
+  });
+  document.getElementById('filterBulan').addEventListener('change', (e)=>{
+    state.filters.bulan = e.target.value; renderTable();
+  });
+  document.getElementById('filterDate').addEventListener('change', (e)=>{
+    state.filters.filterDate = e.target.value; renderTable();
+  });
+
+  document.getElementById('tableBody').addEventListener('click', (e)=>{
+    const btn = e.target.closest('button[data-action]');
+    if(!btn) return;
+    const rowIndex = Number(btn.dataset.row);
+    const rowData = state.rows.find(r=>r.rowIndex === rowIndex);
+    if(btn.dataset.action === 'edit') openPanel(rowData);
+    if(btn.dataset.action === 'delete') askDelete(rowIndex, rowData?.serialNumber || ('#'+rowData?.no));
+  });
+
+  document.getElementById('btnCancelDelete').addEventListener('click', ()=>{
+    document.getElementById('confirmModal').classList.remove('show');
+    pendingDeleteRow = null;
+  });
+  document.getElementById('btnConfirmDelete').addEventListener('click', doDelete);
+
+  document.addEventListener('keydown', (e)=>{
+    if(e.key === 'Escape'){
+      closePanel();
+      document.getElementById('confirmModal').classList.remove('show');
+    }
+  });
+}
+</script>
+</body>
+</html>
