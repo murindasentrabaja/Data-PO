@@ -89,6 +89,26 @@
 
   button { font-family: var(--font-body); cursor: pointer; }
 
+  /* --- ANIMASI NEON --- 
+    Menghindari perubahan transform untuk performa maksimal.
+  */
+  @keyframes neon-blue {
+    0% { box-shadow: 0 0 2px var(--cyan), inset 0 0 2px var(--cyan); }
+    100% { box-shadow: 0 0 10px var(--cyan), inset 0 0 4px var(--cyan); }
+  }
+  @keyframes neon-green {
+    0% { box-shadow: 0 0 2px var(--gemini-green), inset 0 0 2px var(--gemini-green); }
+    100% { box-shadow: 0 0 10px var(--gemini-green), inset 0 0 4px var(--gemini-green); }
+  }
+  @keyframes neon-orange {
+    0% { box-shadow: 0 0 2px var(--gemini-orange), inset 0 0 2px var(--gemini-orange); }
+    100% { box-shadow: 0 0 10px var(--gemini-orange), inset 0 0 4px var(--gemini-orange); }
+  }
+  @keyframes neon-red {
+    0% { box-shadow: 0 0 2px var(--coral), inset 0 0 2px var(--coral); outline-color: var(--coral); }
+    100% { box-shadow: 0 0 10px var(--coral), inset 0 0 4px var(--coral); outline-color: var(--coral); }
+  }
+
   .topbar {
     position: sticky; top: 0; z-index: 20;
     display: flex; align-items: center; justify-content: space-between; gap: 16px;
@@ -121,21 +141,27 @@
   @keyframes ping { 0% { transform: scale(1); opacity: 0.7; } 100% { transform: scale(2.4); opacity: 0; } }
   @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
 
-  /* Modern Button Design */
+  /* Modern Button Design dengan Efek Neon */
   .btn {
     display: inline-flex; align-items: center; gap: 7px;
     padding: 9px 15px; border-radius: var(--radius-sm);
     border: 1px solid rgba(148, 163, 184, 0.5);
     background: var(--panel); color: var(--text);
-    font-size: 13px; font-weight: 500; transition: all 0.2s ease;
+    font-size: 13px; font-weight: 500; 
+    /* Menggunakan transition spesifik (bukan 'all') agar ringan */
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s, outline 0.2s, box-shadow 0.2s;
     box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    outline: 1px solid transparent;
+    outline-offset: -1px;
   }
   .btn:hover { 
     border-color: var(--gemini-blue); 
     background: var(--void); 
-    box-shadow: 0 3px 8px rgba(66, 133, 244, 0.12); 
+    outline-color: var(--cyan);
+    animation: neon-blue 1.5s infinite alternate;
   }
-  .btn:active { transform: translateY(1px); }
+  .btn:active { opacity: 0.8; }
+  
   .btn-primary { 
     background: linear-gradient(135deg, var(--gemini-blue), #1a73e8); 
     color: #fff; border: 1px solid transparent; font-weight: 600; 
@@ -144,14 +170,27 @@
   .btn-primary:hover { 
     border: 1px solid rgba(255,255,255,0.4);
     filter: brightness(1.08); 
-    box-shadow: 0 6px 14px rgba(66, 133, 244, 0.4); 
-    transform: translateY(-1px); 
+    outline-color: #8ab4f8;
+    animation: neon-blue 1.5s infinite alternate;
   }
+  
   .btn-danger { border-color: rgba(234, 67, 53, 0.4); color: var(--coral); }
-  .btn-danger:hover { background: var(--coral-dim); border-color: var(--coral); }
+  .btn-danger:hover { 
+    background: var(--coral-dim); 
+    border-color: var(--coral); 
+    outline-color: var(--coral);
+    animation: neon-red 1.5s infinite alternate;
+  }
+  
   .btn-ghost { background: transparent; border-color: rgba(148, 163, 184, 0.3); color: var(--text-muted); box-shadow: none; }
-  .btn-ghost:hover { color: var(--text); background: var(--gemini-blue-dim); border-color: rgba(66, 133, 244, 0.3); }
-  .btn[disabled] { opacity: 0.6; cursor: not-allowed; filter: grayscale(1); }
+  .btn-ghost:hover { 
+    color: var(--text); 
+    background: var(--gemini-blue-dim); 
+    border-color: rgba(66, 133, 244, 0.3); 
+    outline-color: var(--cyan);
+    animation: neon-blue 1.5s infinite alternate;
+  }
+  .btn[disabled] { opacity: 0.6; cursor: not-allowed; filter: grayscale(1); pointer-events: none; }
   .btn-sm { padding: 6px 10px; font-size: 12px; }
   .icon { width: 14px; height: 14px; flex-shrink: 0; }
 
@@ -215,24 +254,39 @@
   
   tbody tr { 
     border-bottom: 1px solid var(--line-soft); 
-    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); 
+    /* Mengganti transition 'all' menjadi spesifik agar tidak lag saat hover */
+    transition: background-color 0.2s ease, outline 0.2s ease, box-shadow 0.2s ease; 
     position: relative;
     background: var(--panel);
+    /* Persiapan untuk border neon ringan */
+    outline: 1px solid transparent;
+    outline-offset: -1px;
   }
   
   /* Highlight Hari Ini & Besok */
   tbody tr.row-today { background-color: rgba(52, 168, 83, 0.08); }
   tbody tr.row-tomorrow { background-color: rgba(251, 188, 5, 0.12); }
   
+  /* Efek Hover Neon Garis - Jauh Lebih Ringan di GPU.
+     Tidak lagi menggunakan transform: translateY / scale.
+  */
   tbody tr:hover { 
-    transform: translateY(-2px) scale(1.005);
-    box-shadow: 0 8px 24px rgba(66, 133, 244, 0.12);
     z-index: 10;
-    border-radius: 6px;
+    outline-color: var(--cyan);
+    animation: neon-blue 1.5s infinite alternate;
   }
   tbody tr:hover:not(.row-today):not(.row-tomorrow) { background: #ffffff; }
-  tbody tr.row-today:hover { background-color: rgba(52, 168, 83, 0.15); }
-  tbody tr.row-tomorrow:hover { background-color: rgba(251, 188, 5, 0.2); }
+  
+  tbody tr.row-today:hover { 
+    background-color: rgba(52, 168, 83, 0.15); 
+    outline-color: var(--gemini-green);
+    animation: neon-green 1.5s infinite alternate;
+  }
+  tbody tr.row-tomorrow:hover { 
+    background-color: rgba(251, 188, 5, 0.2); 
+    outline-color: var(--gemini-orange);
+    animation: neon-orange 1.5s infinite alternate;
+  }
   
   tbody td { padding: 8px 16px; vertical-align: middle; color: var(--text); transition: color 0.3s; white-space: nowrap; height: 56px; }
   td.no { font-family: var(--font-mono); color: var(--text-faint); width: 36px; }
@@ -287,10 +341,23 @@
   .icon-btn {
     width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center;
     border-radius: 6px; border: 1px solid transparent; background: transparent; color: var(--text-muted);
-    transition: all 0.2s; cursor: pointer;
+    transition: background-color 0.2s, color 0.2s, outline 0.2s, box-shadow 0.2s; 
+    cursor: pointer;
+    outline: 1px solid transparent;
+    outline-offset: -1px;
   }
-  .icon-btn:hover { color: var(--gemini-blue); border-color: var(--gemini-blue-dim2); background: var(--gemini-blue-dim); }
-  .icon-btn.danger:hover { color: var(--coral); border-color: var(--coral-dim); background: var(--coral-dim); }
+  .icon-btn:hover { 
+    color: var(--gemini-blue); 
+    background: var(--gemini-blue-dim); 
+    outline-color: var(--cyan);
+    animation: neon-blue 1.5s infinite alternate;
+  }
+  .icon-btn.danger:hover { 
+    color: var(--coral); 
+    background: var(--coral-dim); 
+    outline-color: var(--coral);
+    animation: neon-red 1.5s infinite alternate;
+  }
 
   .empty-state { padding: 60px 20px; text-align: center; color: var(--text-muted); }
   .empty-state h3 { color: var(--text); margin-bottom: 6px; font-size: 16px; font-weight: 600; }
@@ -897,7 +964,7 @@ const formIds = ['f_poNumber','f_poUpdate','f_deliveryDate','f_unitNumber','f_pa
   'f_qty','f_number','f_statusDelivery','f_noted'];
 
 function openPanel(rowData){
-  if (!rowData) return; // Panel kini hanya untuk mode edit
+  if (!rowData) return; 
   state.editingRowIndex = rowData.rowIndex;
   document.getElementById('panelTitle').textContent = 'Edit Baris #' + rowData.no;
 
