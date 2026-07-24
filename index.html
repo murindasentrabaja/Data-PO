@@ -89,9 +89,6 @@
 
   button { font-family: var(--font-body); cursor: pointer; }
 
-  /* --- ANIMASI NEON --- 
-    Menghindari perubahan transform untuk performa maksimal.
-  */
   @keyframes neon-blue {
     0% { box-shadow: 0 0 2px var(--cyan), inset 0 0 2px var(--cyan); }
     100% { box-shadow: 0 0 10px var(--cyan), inset 0 0 4px var(--cyan); }
@@ -141,14 +138,12 @@
   @keyframes ping { 0% { transform: scale(1); opacity: 0.7; } 100% { transform: scale(2.4); opacity: 0; } }
   @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
 
-  /* Modern Button Design dengan Efek Neon */
   .btn {
     display: inline-flex; align-items: center; gap: 7px;
     padding: 9px 15px; border-radius: var(--radius-sm);
     border: 1px solid rgba(148, 163, 184, 0.5);
     background: var(--panel); color: var(--text);
     font-size: 13px; font-weight: 500; 
-    /* Menggunakan transition spesifik (bukan 'all') agar ringan */
     transition: background-color 0.2s, border-color 0.2s, color 0.2s, outline 0.2s, box-shadow 0.2s;
     box-shadow: 0 1px 2px rgba(0,0,0,0.04);
     outline: 1px solid transparent;
@@ -254,22 +249,16 @@
   
   tbody tr { 
     border-bottom: 1px solid var(--line-soft); 
-    /* Mengganti transition 'all' menjadi spesifik agar tidak lag saat hover */
     transition: background-color 0.2s ease, outline 0.2s ease, box-shadow 0.2s ease; 
     position: relative;
     background: var(--panel);
-    /* Persiapan untuk border neon ringan */
     outline: 1px solid transparent;
     outline-offset: -1px;
   }
   
-  /* Highlight Hari Ini & Besok */
   tbody tr.row-today { background-color: rgba(52, 168, 83, 0.08); }
   tbody tr.row-tomorrow { background-color: rgba(251, 188, 5, 0.12); }
   
-  /* Efek Hover Neon Garis - Jauh Lebih Ringan di GPU.
-     Tidak lagi menggunakan transform: translateY / scale.
-  */
   tbody tr:hover { 
     z-index: 10;
     outline-color: var(--cyan);
@@ -294,7 +283,6 @@
   td.wrap-text { white-space: normal; min-width: 180px; }
   .muted-cell { color: var(--text-muted); }
 
-  /* Inline Editing Input Styling */
   .inline-input {
     background: transparent;
     border: 1px solid transparent;
@@ -682,6 +670,392 @@
 <div id="toastContainer"></div>
 
 <script>
+/**
+ * ================================================================
+ * BACKEND API V3 — PO Control Tower (PT Murinda Sentra Baja)
+ * ================================================================
+ */
+
+const SHEET_NAME = 'PO';
+const FIRST_DATA_ROW = 2;
+const TOTAL_COLS = 16;
+
+// Peta posisi kolom di sheet (1 = kolom A, 12 = Kolom L (Number), 13 = Kolom M (Serial Number))
+const COL = {
+  NO: 1, PO_NUMBER: 2, PERIODE_BULAN: 3, BULAN: 4, PO_UPDATE: 5,
+  UNIT_NUMBER: 6, PART_NUMBER: 7, CODE_SERIAL: 8, QTY: 9, CLIENT: 10,
+  DELIVERY_DATE: 11, NUMBER: 12, SERIAL_NUMBER: 13, STATUS_DELIVERY: 14,
+  SEARCH: 15, NOTED: 16
+};
+
+const BULAN_ID_BACKEND = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+const HARI_ID = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+
+function getSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) throw new Error('Sheet "' + SHEET_NAME + '" tidak ditemukan.');
+  return sheet;
+}
+
+function checkToken_(token) {
+  const required = PropertiesService.getScriptProperties().getProperty('API_TOKEN');
+  if (!required) return true;
+  return token === required;
+}
+
+function jsonOut_(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+}
+
+function pad2_(n) { return (n < 10 ? '0' : '') + n; }
+
+function formatIndoDate_(date) {
+  if (!(date instanceof Date) || isNaN(date)) return '';
+  return HARI_ID[date.getDay()] + ', ' + pad2_(date.getDate()) + ' ' + BULAN_ID_BACKEND[date.getMonth() + 1] + ' ' + date.getFullYear();
+}
+
+function toDateOnly_(value) {
+  if (value instanceof Date) return value;
+  if (typeof value === 'string' && value) {
+    const parts = value.split('-');
+    if (parts.length === 3) return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+  }
+  return null;
+}
+
+/**
+ * POINT 2: Fungsi Pintar Generator Otomatis Kolom Number dan Serial Number per 100 Unit
+ * Aturan: LG-F-085 -> LG-F-100 -> LG-G-001 (Reset counter alphabet tiap kelipatan 100)
+ */
+function getNextSerialNumber_(sheet, codeSerial) {
+  const lastRow = sheet.getLastRow();
+  let maxNumber = 0;
+  let lastSerialStr = '';
+  const prefix = String(codeSerial || 'LG').trim().toUpperCase();
+
+  if (lastRow >= FIRST_DATA_ROW) {
+    const values = sheet.getRange(FIRST_DATA_ROW, 1, lastRow - FIRST_DATA_ROW + 1, TOTAL_COLS).getValues();
+    
+    // 1. Dapatkan angka urutan baris tertinggi di Kolom Number
+    for (let i = 0; i < values.length; i++) {
+      const numVal = parseInt(values[i][COL.NUMBER - 1], 10);
+      if (!isNaN(numVal) && numVal > maxNumber) {
+        maxNumber = numVal;
+      }
+    }
+    
+    // 2. Cari string serial number terakhir khusus untuk Code Serial ini
+    for (let i = values.length - 1; i >= 0; i--) {
+      const currentCode = String(values[i][COL.CODE_SERIAL - 1]).trim().toUpperCase();
+      const currentSerial = String(values[i][COL.SERIAL_NUMBER - 1]).trim();
+      if (currentCode === prefix && currentSerial) {
+        lastSerialStr = currentSerial;
+        break;
+      }
+    }
+  }
+
+  const nextNumber = maxNumber + 1;
+  let nextLetter = 'A';
+  let nextCount = 1;
+
+  if (lastSerialStr) {
+    // Memilah bentuk string misal: "LG-F-085" -> parts: ["LG", "F", "085"]
+    const parts = lastSerialStr.split('-');
+    if (parts.length >= 3) {
+      const currentLetter = parts[parts.length - 2].trim().toUpperCase();
+      const currentCount = parseInt(parts[parts.length - 1], 10);
+
+      if (!isNaN(currentCount)) {
+        if (currentCount >= 100) {
+          nextCount = 1; // Reset nomor ke 001
+          // Majukan huruf ke alphabet berikutnya (F -> G)
+          const charCode = currentLetter.charCodeAt(0);
+          nextLetter = String.fromCharCode(charCode + 1);
+        } else {
+          nextCount = currentCount + 1;
+          nextLetter = currentLetter;
+        }
+      }
+    }
+  } else {
+    // Fallback default jika data sheet benar-benar kosong pertama kali
+    nextLetter = 'A';
+    nextCount = 1;
+  }
+
+  const nextCountStr = String(nextCount).padStart(3, '0');
+  const nextSerialNumber = prefix + '-' + nextLetter + '-' + nextCountStr;
+
+  return {
+    number: nextNumber,
+    serialNumber: nextSerialNumber
+  };
+}
+
+function computeDerived_(row) {
+  let periodeBulan = '', bulan = '';
+  if (row.deliveryDate instanceof Date && !isNaN(row.deliveryDate)) {
+    periodeBulan = row.deliveryDate.getMonth() + 1;
+    bulan = BULAN_ID_BACKEND[periodeBulan];
+  }
+  
+  const search = 'Serial Number:' + row.serialNumber + '/' + (row.unitNumber || '') + '/' + (row.partNumber || '') + '/' + (row.client || '');
+  return { periodeBulan: periodeBulan, bulan: bulan, search: search };
+}
+
+function fmtDateOut_(v) {
+  return (v instanceof Date && !isNaN(v)) ? Utilities.formatDate(v, Session.getScriptTimeZone(), 'yyyy-MM-dd') : (v || '');
+}
+
+function rowToObject_(values, rowIndex) {
+  return {
+    rowIndex: rowIndex,
+    no: values[COL.NO - 1],
+    poNumber: values[COL.PO_NUMBER - 1],
+    periodeBulan: values[COL.PERIODE_BULAN - 1],
+    bulan: values[COL.BULAN - 1],
+    poUpdate: fmtDateOut_(values[COL.PO_UPDATE - 1]),
+    unitNumber: values[COL.UNIT_NUMBER - 1],
+    partNumber: values[COL.PART_NUMBER - 1],
+    codeSerial: values[COL.CODE_SERIAL - 1],
+    qty: values[COL.QTY - 1],
+    client: values[COL.CLIENT - 1],
+    deliveryDate: fmtDateOut_(values[COL.DELIVERY_DATE - 1]),
+    number: values[COL.NUMBER - 1],
+    serialNumber: values[COL.SERIAL_NUMBER - 1],
+    statusDelivery: values[COL.STATUS_DELIVERY - 1],
+    search: values[COL.SEARCH - 1],
+    noted: values[COL.NOTED - 1]
+  };
+}
+
+// ---------------------------------------------------------------
+// Engine Read & Meta
+// ---------------------------------------------------------------
+
+function listRows_() {
+  const sheet = getSheet_();
+  const lastRow = sheet.getLastRow();
+  if (lastRow < FIRST_DATA_ROW) return { ok: true, rows: [] };
+  const data = sheet.getRange(FIRST_DATA_ROW, 1, lastRow - FIRST_DATA_ROW + 1, TOTAL_COLS).getValues();
+  const rows = [];
+  for (let i = 0; i < data.length; i++) {
+    const values = data[i];
+    if (!values[COL.UNIT_NUMBER - 1] && !values[COL.PO_NUMBER - 1]) continue;
+    rows.push(rowToObject_(values, FIRST_DATA_ROW + i));
+  }
+  return { ok: true, rows: rows };
+}
+
+function getMeta_() {
+  const sheet = getSheet_();
+  const lastRow = sheet.getLastRow();
+  const clients = {}, units = {};
+  if (lastRow >= FIRST_DATA_ROW) {
+    const data = sheet.getRange(FIRST_DATA_ROW, 1, lastRow - FIRST_DATA_ROW + 1, TOTAL_COLS).getValues();
+    data.forEach(function (v) {
+      const unit = v[COL.UNIT_NUMBER - 1], part = v[COL.PART_NUMBER - 1],
+            code = v[COL.CODE_SERIAL - 1], client = v[COL.CLIENT - 1];
+      if (client) clients[client] = true;
+      if (unit) units[unit] = { partNumber: part, codeSerial: code };
+    });
+  }
+  return {
+    ok: true,
+    clients: Object.keys(clients).sort(),
+    units: units,
+    bulanList: BULAN_ID_BACKEND.slice(1)
+  };
+}
+
+function validate_(data) {
+  const errors = [];
+  if (!data.unitNumber) errors.push('Unit Number wajib diisi');
+  const d = toDateOnly_(data.deliveryDate);
+  if (!d || isNaN(d)) errors.push('Delivery/Stock Date tidak valid');
+  return errors;
+}
+
+// DITAMBAHKAN PARAMETER isUpdate AGAR TIDAK ME-RESET STATUS DELIVERY LAMA
+function buildRowArray_(data, isUpdate) {
+  const deliveryDate = toDateOnly_(data.deliveryDate);
+  const poUpdate = data.poUpdate ? toDateOnly_(data.poUpdate) : '';
+  const derived = computeDerived_(data);
+  
+  const row = new Array(TOTAL_COLS).fill('');
+  row[COL.PO_NUMBER - 1] = data.poNumber || '';
+  row[COL.PERIODE_BULAN - 1] = derived.periodeBulan;
+  row[COL.BULAN - 1] = derived.bulan;
+  row[COL.PO_UPDATE - 1] = poUpdate;
+  row[COL.UNIT_NUMBER - 1] = data.unitNumber || '';
+  row[COL.PART_NUMBER - 1] = data.partNumber || '';
+  row[COL.CODE_SERIAL - 1] = data.codeSerial || '';
+  row[COL.QTY - 1] = Number(data.qty || 1);
+  row[COL.CLIENT - 1] = data.client || '';
+  row[COL.DELIVERY_DATE - 1] = deliveryDate;
+  row[COL.NUMBER - 1] = data.number || '';
+  row[COL.SERIAL_NUMBER - 1] = data.serialNumber || '';
+  
+  // LOGIKA PERBAIKAN: Hanya buat default status delivery jika ini data BARU
+  let finalStatus = data.statusDelivery;
+  if (!isUpdate && !finalStatus) {
+    finalStatus = 'Masuk Stok (' + formatIndoDate_(deliveryDate) + ')';
+  }
+  row[COL.STATUS_DELIVERY - 1] = finalStatus || '';
+  
+  row[COL.SEARCH - 1] = derived.search;
+  row[COL.NOTED - 1] = data.noted || '';
+  return row;
+}
+
+function renumber_() {
+  const sheet = getSheet_();
+  const lastRow = sheet.getLastRow();
+  if (lastRow < FIRST_DATA_ROW) return;
+  const n = lastRow - FIRST_DATA_ROW + 1;
+  const nums = [];
+  for (let i = 1; i <= n; i++) nums.push([i]);
+  sheet.getRange(FIRST_DATA_ROW, COL.NO, n, 1).setValues(nums);
+}
+
+// ---------------------------------------------------------------
+// Core Writer (Create & Update)
+// ---------------------------------------------------------------
+
+function createRow_(data) {
+  const errors = validate_(data);
+  if (errors.length) return { ok: false, error: errors.join(', ') };
+  
+  const sheet = getSheet_();
+  
+  // POINT 1 & 2: Cari referensi Part Number & Code Serial berdasarkan history Unit Number
+  if (!data.partNumber || !data.codeSerial) {
+    const lastRow = sheet.getLastRow();
+    if (lastRow >= FIRST_DATA_ROW) {
+      const values = sheet.getRange(FIRST_DATA_ROW, 1, lastRow - FIRST_DATA_ROW + 1, TOTAL_COLS).getValues();
+      for (let i = values.length - 1; i >= 0; i--) {
+        if (String(values[i][COL.UNIT_NUMBER - 1]).trim().toLowerCase() === String(data.unitNumber).trim().toLowerCase()) {
+          if (!data.partNumber) data.partNumber = values[i][COL.PART_NUMBER - 1];
+          if (!data.codeSerial) data.codeSerial = values[i][COL.CODE_SERIAL - 1];
+          break;
+        }
+      }
+    }
+  }
+  
+  // Nilai Fallback jika data unit baru sama sekali belum pernah ada di sheet
+  if (!data.codeSerial) data.codeSerial = 'LG';
+  if (!data.partNumber) data.partNumber = 'PART-' + data.unitNumber;
+  if (!data.client) data.client = data.poNumber ? 'Umum' : 'Stok';
+
+  // Dapatkan total quantity yang ingin ditambahkan (looping per baris unit tunggal)
+  const loops = Math.max(1, parseInt(data.qty, 10) || 1);
+
+  for (let q = 0; q < loops; q++) {
+    // Generate nomor baris & serial number unik realtime bergantian
+    const generated = getNextSerialNumber_(sheet, data.codeSerial);
+    
+    const singleData = Object.assign({}, data, {
+      qty: 1, // dipecah menjadi 1 baris per 1 unit serial
+      number: generated.number,
+      serialNumber: generated.serialNumber
+    });
+    
+    const nextRowIndex = sheet.getLastRow() + 1 < FIRST_DATA_ROW ? FIRST_DATA_ROW : sheet.getLastRow() + 1;
+    // Parameter false menandakan ini create (Bukan update)
+    sheet.getRange(nextRowIndex, 1, 1, TOTAL_COLS).setValues([buildRowArray_(singleData, false)]);
+  }
+
+  renumber_();
+  return listRows_();
+}
+
+function updateRow_(rowIndex, data) {
+  const sheet = getSheet_();
+  if (!rowIndex || rowIndex < FIRST_DATA_ROW || rowIndex > sheet.getLastRow()) {
+    return { ok: false, error: 'Baris tidak ditemukan — silakan muat ulang data.' };
+  }
+
+  // Jaga data identitas Number & Serial Number lama saat diubah dari Panel Edit
+  const currentValues = sheet.getRange(rowIndex, 1, 1, TOTAL_COLS).getValues()[0];
+  
+  // LOGIKA PERBAIKAN UTAMA:
+  // Ambil paksa data sheet lama agar tidak ada field kosong yang tak sengaja tertimpa
+  if (data.number === undefined || data.number === '') data.number = currentValues[COL.NUMBER - 1];
+  
+  // Mutlak Kunci Serial Number dari data lama agar tidak pernah berubah sama sekali
+  data.serialNumber = currentValues[COL.SERIAL_NUMBER - 1];
+  
+  if (data.partNumber === undefined || data.partNumber === '') data.partNumber = currentValues[COL.PART_NUMBER - 1];
+  if (data.codeSerial === undefined || data.codeSerial === '') data.codeSerial = currentValues[COL.CODE_SERIAL - 1];
+  if (data.client === undefined || data.client === '') data.client = currentValues[COL.CLIENT - 1];
+  
+  // Mutlak Kunci Status Delivery lama (kecuali jika diketik perubahan spesifik lewat form)
+  if (data.statusDelivery === undefined || data.statusDelivery === '') {
+     data.statusDelivery = currentValues[COL.STATUS_DELIVERY - 1];
+  }
+
+  const errors = validate_(data);
+  if (errors.length) return { ok: false, error: errors.join(', ') };
+
+  // Parameter true menandakan proses update sedang berjalan agar status tidak direplace otomatis
+  sheet.getRange(rowIndex, 1, 1, TOTAL_COLS).setValues([buildRowArray_(data, true)]);
+  renumber_();
+  return listRows_();
+}
+
+function deleteRow_(rowIndex) {
+  const sheet = getSheet_();
+  if (!rowIndex || rowIndex < FIRST_DATA_ROW || rowIndex > sheet.getLastRow()) {
+    return { ok: false, error: 'Baris tidak ditemukan.' };
+  }
+  sheet.deleteRow(rowIndex);
+  renumber_();
+  return listRows_();
+}
+
+// ---------------------------------------------------------------
+// HTTP Web App Gateways
+// ---------------------------------------------------------------
+
+function doGet(e) {
+  try {
+    const action = (e && e.parameter && e.parameter.action) || 'list';
+    if (action === 'meta') return jsonOut_(getMeta_());
+    if (action === 'ping') return jsonOut_({ ok: true, time: new Date().toISOString() });
+    return jsonOut_(listRows_());
+  } catch (err) {
+    return jsonOut_({ ok: false, error: String(err) });
+  }
+}
+
+function doPost(e) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(20000);
+  } catch (err) {
+    return jsonOut_({ ok: false, error: 'Sistem sibuk, silakan coba lagi.' });
+  }
+  try {
+    const body = JSON.parse(e.postData.contents);
+    if (!checkToken_(body.token)) return jsonOut_({ ok: false, error: 'Token tidak valid.' });
+
+    let result;
+    if (body.action === 'create') result = createRow_(body.data);
+    else if (body.action === 'update') result = updateRow_(body.rowIndex, body.data);
+    else if (body.action === 'delete') result = deleteRow_(body.rowIndex);
+    else result = { ok: false, error: 'Action not found' };
+
+    return jsonOut_(result);
+  } catch (err) {
+    return jsonOut_({ ok: false, error: String(err) });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 /* =========================================================
    CONFIG — isi dua baris ini setelah Code.gs Anda ter-deploy
    ========================================================= */
@@ -700,7 +1074,6 @@ function serialSuffix(code){
   return '-';
 }
 
-/* Parse tanggal ke format lokal yg anti error bergeser hari */
 function parseDateSafe(val) {
   if (!val) return null;
   let d;
@@ -1029,12 +1402,19 @@ function readForm(){
 function updateDerivedPreview(){
   const f = readForm();
   const derived = computeDerived(f);
+  
+  let actualSerial = derived.serialNumber;
+  if (state.editingRowIndex) {
+    const rowData = state.rows.find(r=>r.rowIndex===state.editingRowIndex);
+    if (rowData && rowData.serialNumber) actualSerial = rowData.serialNumber;
+  }
+  
   document.getElementById('d_no').textContent = state.editingRowIndex
     ? (state.rows.find(r=>r.rowIndex===state.editingRowIndex)?.no ?? '—')
     : (state.rows.length + 1);
   document.getElementById('d_periode').textContent = derived.periodeBulan || '(kosong — isi PO Number dulu)';
   document.getElementById('d_bulan').textContent = derived.bulan || '(kosong)';
-  document.getElementById('d_serial').textContent = derived.serialNumber || '(kosong)';
+  document.getElementById('d_serial').textContent = actualSerial || '(kosong)';
   document.getElementById('d_search').textContent = derived.search || '(kosong)';
 }
 
